@@ -1,0 +1,68 @@
+:root {
+  /* The Void */
+  --void-deepest: #08080c;
+  --void-deep: #0e0e14;
+  --void-medium: #16161f;
+  --void-surface: #1e1e2a;
+  --void-elevated: #262635;
+
+  /* Starlight */
+  --star-bright: #e8e4f0;
+  --star-dim: #a09aaf;
+  --star-faint: #6b6578;
+  --star-ghost: #3d3849;
+
+  /* Ley Lines */
+  --ley-dormant: #2a2440;
+  --ley-active: #4a3f6b;
+  --ley-pulse: #7b6ba0;
+  --ley-flare: #a594d0;
+
+  /* Blood / Warning */
+  --blood-faint: #3a1a1a;
+  --blood-dim: #8a3030;
+  --ember-dim: #8a6540;
+  --ember-bright: #c49a6c;
+
+  /* Status */
+  --offering-glow: #4a6b3f;
+  --processing-glow: #6b5a3f;
+  --bound-glow: #3f4a6b;
+
+  /* Typography */
+  --font-primary: 'Crimson Text', 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+  --font-ui: 'Inter', 'Segoe UI', system-ui, sans-serif;
+
+  /* Font sizes */
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.9rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.4rem;
+  --text-2xl: 1.8rem;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Borders */
+  --border-thin: 1px solid rgba(160, 154, 175, 0.1);
+  --border-medium: 1px solid rgba(160, 154, 175, 0.2);
+  --border-glow: 1px solid rgba(123, 107, 160, 0.3);
+  --border-radius: 1px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+
+  /* Transitions */
+  --transition-fast: 120ms ease;
+  --transition-medium: 250ms ease;
+  --transition-slow: 400ms ease;
+}
