@@ -19,6 +19,22 @@ html, body {
   user-select: none;
 }
 
+/* The Breathing Void — ambient background pulse */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(123, 107, 160, 0.03), transparent 70%);
+  animation: void-breathe 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes void-breathe {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
 /* Scrollbar styling - thin, dark, unobtrusive */
 ::-webkit-scrollbar {
   width: 6px;
@@ -108,4 +124,26 @@ button:hover {
 
 button:active {
   background: var(--ley-dormant);
+}
+
+/* ========================================
+   Whisper Mode — sensory reduction toggle
+   Ctrl+Shift+W to activate
+   ======================================== */
+
+.whisper {
+  filter: saturate(0.3) brightness(0.85);
+  transition: filter 1s ease;
+}
+
+.whisper *,
+.whisper *::before,
+.whisper *::after {
+  animation-play-state: paused !important;
+  transition-duration: 1s !important;
+}
+
+/* Ensure the shell always has a transition so exiting whisper mode fades too */
+.app-shell {
+  transition: filter 1s ease;
 }

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { softError } from '$lib/stores/whispers.svelte';
+
   let query = $state('');
   let response = $state('');
   let sources: any[] = $state([]);
@@ -16,7 +18,15 @@
       response = result.answer;
       sources = result.sources;
     } catch (e: any) {
-      response = `The Librarian encountered darkness: ${e}`;
+      const detail = String(e);
+      if (detail.includes('not found')) {
+        response = 'The Librarian reaches out... but the model has not yet been summoned. Check your Ollama settings.';
+      } else if (detail.includes('connection') || detail.includes('Connection')) {
+        response = 'The Librarian cannot reach the oracle. Is Ollama running?';
+      } else {
+        response = 'The Librarian retreats into shadow. The query could not be answered right now.';
+      }
+      softError();
     }
     loading = false;
   }

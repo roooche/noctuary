@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { softError } from '$lib/stores/whispers.svelte';
 
   let items: any[] = $state([]);
   let allTags: any[] = $state([]);
@@ -14,8 +15,8 @@
     try {
       const result = await invoke('list_vault_items');
       if (result) items = result;
-    } catch (e) {
-      console.error('Failed to load vault items:', e);
+    } catch {
+      softError('the vault could not be opened');
     }
   }
 
@@ -23,8 +24,8 @@
     try {
       const result = await invoke('get_all_tags');
       if (result) allTags = result;
-    } catch (e) {
-      console.error('Failed to load tags:', e);
+    } catch {
+      // silent — tags will retry on next poll
     }
   }
 

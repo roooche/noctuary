@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { softError } from '$lib/stores/whispers.svelte';
 
   let offerings: any[] = $state([]);
   let dragOver = $state(false);
@@ -7,6 +8,13 @@
   let newUrl = $state('');
   let loading = $state(false);
   let unlistenDragDrop: (() => void) | null = null;
+
+  // Deluge Mode state
+  let delugeActive = $state(false);
+  let delugeText = $state('');
+  let delugeCount = $state(0);
+  let delugeStream: string[] = $state([]);
+  let delugeInput: HTMLInputElement | undefined = $state(undefined);
 
   async function invoke(cmd: string, args?: any): Promise<any> {
     const { invoke: tauriInvoke } = await import('@tauri-apps/api/core');
@@ -28,12 +36,12 @@
         for (const filePath of paths) {
           invoke('create_offering_from_file', { filePath })
             .then(() => loadOfferings())
-            .catch((e) => console.error('Failed to process dropped file:', e));
+            .catch(() => softError('the offering slipped through'));
         }
       }
     });
-    } catch (e) {
-      console.error('Failed to setup drag-drop:', e);
+    } catch {
+      // drag-drop not available outside Tauri
     }
   }
 
@@ -41,8 +49,8 @@
     try {
       const result = await invoke('list_offerings');
       if (result) offerings = result;
-    } catch (e) {
-      console.error('Failed to load offerings:', e);
+    } catch {
+      // silent — auto-refresh will retry
     }
   }
 
@@ -58,8 +66,8 @@
       });
       newText = '';
       await loadOfferings();
-    } catch (e) {
-      console.error('Failed to create offering:', e);
+    } catch {
+      softError('the offering could not be placed');
     }
     loading = false;
   }
@@ -71,18 +79,46 @@
       await invoke('create_offering_from_url', { url: newUrl.trim() });
       newUrl = '';
       await loadOfferings();
-    } catch (e) {
-      console.error('Failed to create offering:', e);
+    } catch {
+      softError('the URL could not be gathered');
     }
     loading = false;
+  }
+
+  async function submitDeluge() {
+    const text = delugeText.trim();
+    if (!text) return;
+    const title = text.substring(0, 80) + (text.length > 80 ? '...' : '');
+    delugeText = '';
+    delugeCount++;
+    delugeStream = [text, ...delugeStream].slice(0, 5);
+    // Fire and forget - don't block the input
+    invoke('create_offering', {
+      title,
+      content: text,
+      sourceType: 'text',
+    })
+      .then(() => loadOfferings())
+      .catch(() => softError('a thought was lost to the deluge'));
+    // Re-focus after tick
+    setTimeout(() => delugeInput?.focus(), 0);
+  }
+
+  function toggleDeluge() {
+    delugeActive = !delugeActive;
+    if (delugeActive) {
+      delugeCount = 0;
+      delugeStream = [];
+      setTimeout(() => delugeInput?.focus(), 0);
+    }
   }
 
   async function deleteOffering(id: string) {
     try {
       await invoke('delete_offering', { id });
       await loadOfferings();
-    } catch (e) {
-      console.error('Failed to delete offering:', e);
+    } catch {
+      softError('the offering resists dismissal');
     }
   }
 
@@ -149,33 +185,74 @@
   </div>
 
   <div class="input-area">
-    <div class="input-group">
-      <textarea
-        bind:value={newText}
-        placeholder="Write or paste something..."
-        rows="3"
-        onkeydown={(e) => {
-          if (e.key === 'Enter' && e.ctrlKey) submitText();
-        }}
-      ></textarea>
-      <button onclick={submitText} disabled={loading || !newText.trim()}>
-        Offer ◇
-      </button>
-    </div>
+    {#if delugeActive}
+      <div class="deluge-zone">
+        <div class="deluge-header">
+          <span class="deluge-label">DELUGE</span>
+          {#if delugeCount > 0}
+            <span class="deluge-counter">{delugeCount} thought{delugeCount !== 1 ? 's' : ''} poured</span>
+          {/if}
+          <button class="deluge-toggle active" onclick={toggleDeluge}>
+            ✕ Exit
+          </button>
+        </div>
+        <input
+          class="deluge-input"
+          type="text"
+          bind:this={delugeInput}
+          bind:value={delugeText}
+          placeholder="pour forth..."
+          onkeydown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submitDeluge();
+            }
+          }}
+        />
+        {#if delugeStream.length > 0}
+          <div class="deluge-stream">
+            {#each delugeStream as thought, i}
+              <div class="deluge-stream-item" style="opacity: {1 - i * 0.18}">
+                {thought}
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <div class="input-group">
+        <textarea
+          bind:value={newText}
+          placeholder="Write or paste something..."
+          rows="3"
+          onkeydown={(e) => {
+            if (e.key === 'Enter' && e.ctrlKey) submitText();
+          }}
+        ></textarea>
+        <div class="input-actions">
+          <button onclick={submitText} disabled={loading || !newText.trim()}>
+            Offer ◇
+          </button>
+          <button class="deluge-toggle" onclick={toggleDeluge} title="Deluge Mode: rapid-fire brain dump">
+            ≋ Deluge
+          </button>
+        </div>
+      </div>
 
-    <div class="input-group url-group">
-      <input
-        type="text"
-        bind:value={newUrl}
-        placeholder="Paste a URL..."
-        onkeydown={(e) => {
-          if (e.key === 'Enter') submitUrl();
-        }}
-      />
-      <button onclick={submitUrl} disabled={loading || !newUrl.trim()}>
-        Offer ⟁
-      </button>
-    </div>
+      <div class="input-group url-group">
+        <input
+          type="text"
+          bind:value={newUrl}
+          placeholder="Paste a URL..."
+          onkeydown={(e) => {
+            if (e.key === 'Enter') submitUrl();
+          }}
+        />
+        <button onclick={submitUrl} disabled={loading || !newUrl.trim()}>
+          Offer ⟁
+        </button>
+      </div>
+    {/if}
   </div>
 
   <div class="offerings-list">
@@ -444,5 +521,115 @@
   .empty-hint {
     font-size: var(--text-xs);
     margin-top: var(--space-sm);
+  }
+
+  /* --- Input actions column --- */
+
+  .input-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    height: fit-content;
+  }
+
+  /* --- Deluge Mode --- */
+
+  .deluge-toggle {
+    white-space: nowrap;
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-xs);
+    letter-spacing: 0.05em;
+    background: transparent;
+    border: 1px dashed var(--ley-pulse);
+    color: var(--ley-pulse);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .deluge-toggle:hover {
+    background: var(--ley-dormant);
+    border-style: solid;
+  }
+
+  .deluge-toggle.active {
+    background: transparent;
+    border-color: var(--star-ghost);
+    color: var(--star-ghost);
+    font-size: var(--text-xs);
+  }
+
+  .deluge-toggle.active:hover {
+    border-color: var(--blood-dim);
+    color: var(--blood-dim);
+    background: transparent;
+  }
+
+  .deluge-zone {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .deluge-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .deluge-label {
+    font-family: var(--font-primary);
+    font-size: var(--text-xs);
+    letter-spacing: 0.2em;
+    color: var(--ley-pulse);
+    text-transform: uppercase;
+  }
+
+  .deluge-counter {
+    font-size: var(--text-xs);
+    color: var(--star-ghost);
+    font-style: italic;
+    margin-left: auto;
+  }
+
+  .deluge-input {
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    font-size: var(--text-lg, 1.125rem);
+    font-family: var(--font-primary);
+    background: var(--void-deep);
+    border: 1px solid var(--ley-pulse);
+    color: var(--star-bright);
+    outline: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    box-shadow: 0 0 12px rgba(107, 91, 149, 0.15);
+  }
+
+  .deluge-input:focus {
+    border-color: var(--ley-pulse);
+    box-shadow: 0 0 20px rgba(107, 91, 149, 0.3);
+  }
+
+  .deluge-input::placeholder {
+    color: var(--star-ghost);
+    font-style: italic;
+    opacity: 0.6;
+  }
+
+  .deluge-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: var(--space-xs);
+  }
+
+  .deluge-stream-item {
+    font-size: var(--text-sm);
+    color: var(--star-faint);
+    padding: var(--space-xs) var(--space-sm);
+    border-left: 2px solid var(--ley-pulse);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.3s ease;
   }
 </style>

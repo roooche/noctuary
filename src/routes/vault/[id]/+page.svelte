@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { softError } from '$lib/stores/whispers.svelte';
 
   let item: any = $state(null);
   let notFound = $state(false);
@@ -25,8 +26,8 @@
       } else {
         notFound = true;
       }
-    } catch (e) {
-      console.error('Failed to load item:', e);
+    } catch {
+      softError('the artifact could not be retrieved');
       notFound = true;
     }
   }
@@ -37,8 +38,8 @@
       await invoke('add_user_tag', { itemId: item.id, tagName: newTag.trim() });
       newTag = '';
       await loadItem(page.params.id);
-    } catch (e) {
-      console.error('Failed to add tag:', e);
+    } catch {
+      softError('the tag would not bind');
     }
   }
 
@@ -47,8 +48,8 @@
     try {
       await invoke('remove_tag', { itemId: item.id, tagId });
       await loadItem(page.params.id);
-    } catch (e) {
-      console.error('Failed to remove tag:', e);
+    } catch {
+      softError('the tag clings stubbornly');
     }
   }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { softError, softGlow } from '$lib/stores/whispers.svelte';
 
   let ollamaUrl = $state('http://localhost:11434');
   let ollamaModel = $state('llama3.2:3b');
@@ -26,8 +27,8 @@
 
       const path = await invoke('get_vault_path');
       if (path) vaultPath = path;
-    } catch (e) {
-      console.error('Failed to load settings:', e);
+    } catch {
+      softError('settings could not be read');
     }
   }
 
@@ -38,8 +39,9 @@
       await invoke('set_setting', { key: 'embedding_model', value: embeddingModel });
       saved = true;
       setTimeout(() => (saved = false), 2000);
-    } catch (e) {
-      console.error('Failed to save settings:', e);
+      softGlow('Settings inscribed');
+    } catch {
+      softError('settings could not be saved');
     }
   }
 
